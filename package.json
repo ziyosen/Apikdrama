@@ -1,5 +1,14 @@
 {
-  "name": "api-test",
+  "name": "drama-scraper",
   "version": "1.0.0",
-  "type": "module"
+  "description": "Scraper untuk DramaID menggunakan Playwright",
+  "main": "index.js",
+  "dependencies": {
+    "playwright": "^1.40.0"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "Benxx Sonzay",
+  "license": "ISC"
 }
