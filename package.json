@@ -1,14 +1,13 @@
 {
-  "name": "drama-scraper",
+  "name": "drama-scraper-lite",
   "version": "1.0.0",
-  "description": "Scraper untuk DramaID menggunakan Playwright",
+  "description": "Scraper ringan untuk Vercel",
   "main": "index.js",
   "dependencies": {
-    "playwright": "^1.40.0"
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.0-rc.12"
   },
   "scripts": {
     "start": "node index.js"
-  },
-  "author": "Benxx Sonzay",
-  "license": "ISC"
+  }
 }
