@@ -1,12 +1,8 @@
 {
   "name": "drama-scraper",
   "version": "1.0.0",
-  "main": "index.js",
   "dependencies": {
-    "playwright-core": "^1.40.0",
-    "@sparticuz/chromium": "^119.0.0"
-  },
-  "scripts": {
-    "start": "node index.js"
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.0-rc.12"
   }
 }
