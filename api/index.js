@@ -2,51 +2,58 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 
 module.exports = async (req, res) => {
-    // Setting CORS agar bisa diakses GitHub Pages
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  // Biar ga kena CORS saat dipanggil dari GitHub Pages
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET');
 
-    if (req.method === 'OPTIONS') {
-        res.status(200).end();
-        return;
-    }
+  try {
+    const domain = 'https://drama-id.com'; // Sesuaikan dengan target scrape kamu
+    const { data } = await axios.get(domain, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/119.0.0.0 Safari/537.36' }
+    });
+    
+    const $ = cheerio.load(data);
+    const movies = [];
 
-    const url = "https://drama-id.com/negara/korea-selatan/";
-
-    try {
-        const { data } = await axios.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-        const $ = cheerio.load(data);
-        let movies = [];
-
-        // Scrape daftar film sesuai struktur HTML
-        $('.style_post_1 article').each((i, el) => {
-            movies.push({
-                title: $(el).find('.title_post a').text().trim(),
-                link: $(el).find('.title_post a').attr('href'),
-                image: $(el).find('.thumbnail img').attr('src')
-            });
+    // 1. Ambil daftar film dari halaman depan
+    $('.media-block').each((i, el) => {
+      if (i < 10) { // Kita batasi 10 film biar satset & ga kena limit Vercel
+        movies.push({
+          title: $(el).find('.title-main').text().trim(),
+          image: $(el).find('img').attr('src'),
+          detail_url: $(el).find('a').attr('href'),
+          streaming_url: null // Awalnya kosong
         });
+      }
+    });
 
-        // Ambil link streaming (Hanya 5 film pertama agar Vercel tidak timeout)
-        for (let i = 0; i < Math.min(movies.length, 5); i++) {
-            try {
-                const detailRes = await axios.get(movies[i].link);
-                const $d = cheerio.load(detailRes.data);
-                const streamingData = $d('.streaming_load').attr('data');
-                
-                if (streamingData) {
-                    const decoded = Buffer.from(streamingData, 'base64').toString('utf-8');
-                    const match = decoded.match(/src="([^"]+)"/);
-                    movies[i].streaming_url = match ? match[1] : null;
-                }
-            } catch (err) {
-                console.error("Gagal ambil detail");
-            }
+    // 2. Loop untuk masuk ke halaman detail & ambil link videonya
+    for (let i = 0; i < movies.length; i++) {
+      try {
+        const detailRes = await axios.get(movies[i].detail_url, { timeout: 3000 });
+        const $detail = cheerio.load(detailRes.data);
+        
+        // Cari iframe atau link video (Selector ini sering berubah, pastikan pas)
+        let videoLink = $detail('iframe').attr('src') || $detail('video source').attr('src');
+
+        if (videoLink) {
+          // Pastikan link lengkap (absolut)
+          if (videoLink.startsWith('//')) videoLink = 'https:' + videoLink;
+          if (videoLink.startsWith('/')) videoLink = domain + videoLink;
+          
+          movies[i].streaming_url = videoLink;
         }
-
-        res.status(200).json({ status: "success", data: movies });
-    } catch (error) {
-        res.status(500).json({ status: "error", message: error.message });
+      } catch (err) {
+        console.log(`Gagal ambil detail film ke-${i}`);
+      }
     }
+
+    res.status(200).json({
+      success: true,
+      data: movies
+    });
+
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
